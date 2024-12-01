@@ -10,38 +10,29 @@ import java.nio.ShortBuffer;
  * Audio chunk decoder for Opus codec.
  */
 public class OpusChunkDecoder implements AudioChunkDecoder {
-  private final OpusDecoder decoder;
-  private final ByteBuffer encodedBuffer;
+    private final OpusDecoder decoder;
+    private final ByteBuffer encodedBuffer;
 
-  /**
-   * @param format Source audio format.
-   */
-  public OpusChunkDecoder(AudioDataFormat format) {
-    encodedBuffer = ByteBuffer.allocateDirect(4096);
-    decoder = new OpusDecoder(format.sampleRate, format.channelCount);
-  }
+    /**
+     * @param format Source audio format.
+     */
+    public OpusChunkDecoder(AudioDataFormat format) {
+        encodedBuffer = ByteBuffer.allocateDirect(4096);
+        decoder = new OpusDecoder(format.sampleRate, format.channelCount);
+    }
 
-  @Override
-  public void decode(byte[] encoded, ShortBuffer buffer) {
-    decodeWithCount(encoded, buffer);
-  }
+    @Override
+    public void decode(byte[] encoded, ShortBuffer buffer) {
+        encodedBuffer.clear();
+        encodedBuffer.put(encoded);
+        encodedBuffer.flip();
 
-  public int decodeWithCount(byte[] encoded, ShortBuffer buffer) {
-    encodedBuffer.clear();
-    encodedBuffer.put(encoded);
-    encodedBuffer.flip();
+        buffer.clear();
+        decoder.decode(encodedBuffer, buffer);
+    }
 
-    buffer.clear();
-    return decoder.decode(encodedBuffer, buffer);
-  }
-
-  @Override
-  public void decode(ByteBuffer encoded, ShortBuffer buffer) {
-    decoder.decode(encoded, buffer);
-  }
-
-  @Override
-  public void close() {
-    decoder.close();
-  }
+    @Override
+    public void close() {
+        decoder.close();
+    }
 }

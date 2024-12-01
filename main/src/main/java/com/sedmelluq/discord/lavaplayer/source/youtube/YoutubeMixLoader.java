@@ -8,10 +8,10 @@ import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo;
 import java.util.function.Function;
 
 public interface YoutubeMixLoader {
-  AudioPlaylist load(
-      HttpInterface httpInterface,
-      String mixId,
-      String selectedVideoId,
-      Function<AudioTrackInfo, AudioTrack> trackFactory
-  );
+    AudioPlaylist load(
+        HttpInterface httpInterface,
+        String mixId,
+        String selectedVideoId,
+        Function<AudioTrackInfo, AudioTrack> trackFactory
+    );
 }

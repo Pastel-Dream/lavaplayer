@@ -8,8 +8,8 @@ import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo;
 import java.util.function.Function;
 
 public interface YoutubePlaylistLoader {
-  void setPlaylistPageCount(int playlistPageCount);
+    void setPlaylistPageCount(int playlistPageCount);
 
-  AudioPlaylist load(HttpInterface httpInterface, String playlistId, String selectedVideoId,
-                     Function<AudioTrackInfo, AudioTrack> trackFactory);
+    AudioPlaylist load(HttpInterface httpInterface, String playlistId, String selectedVideoId,
+                       Function<AudioTrackInfo, AudioTrack> trackFactory);
 }

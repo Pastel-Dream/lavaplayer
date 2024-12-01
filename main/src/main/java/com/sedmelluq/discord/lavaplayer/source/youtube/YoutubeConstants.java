@@ -1,22 +1,28 @@
 package com.sedmelluq.discord.lavaplayer.source.youtube;
 
 public class YoutubeConstants {
-    // Keys
-    public static final String INNERTUBE_WEB_API_KEY = "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8";
-    public static final String INNERTUBE_ANDROID_API_KEY = "AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vz_yYM39w";
-    public static final String INNERTUBE_IOS_API_KEY = "AIzaSyB-63vPrdThhKuerbB2N_l7Kwwcxj6yUAc";
-    public static final String INNERTUBE_TV_API_KEY = "AIzaSyD-L7DIyuMgBk-B4DYmjJZ5UG-D6Y-vkMc";
-    public static final String INNERTUBE_MUSIC_API_KEY = "AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30";
-
-    public static final String PLAYER_PARAMS = "CgIQBg";
-    public static final String PLAYER_PARAMS_WEB = "ygUEbmF0dA%3D%3D";
-    public static final String SEARCH_PARAMS = "EgIQAQ==";
-    public static final String SEARCH_MUSIC_PARAMS = "Eg-KAQwIARAAGAAgACgAMABqChADEAQQCRAFEAo=";
 
     // YouTube constants
     static final String YOUTUBE_ORIGIN = "https://www.youtube.com";
     static final String YOUTUBE_API_ORIGIN = "https://youtubei.googleapis.com";
     static final String BASE_URL = YOUTUBE_API_ORIGIN + "/youtubei/v1";
+
+    static final String INNERTUBE_ANDROID_API_KEY = "AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vz_yYM39w";
+    static final String CLIENT_ANDROID_NAME = "ANDROID";
+    static final String CLIENT_ANDROID_VERSION = "18.06.35";
+
+    static final String INNERTUBE_WEB_API_KEY = "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8";
+    static final String CLIENT_WEB_NAME = "WEB";
+    static final String CLIENT_WEB_VERSION = "2.20220801.00.00";
+
+    static final String INNERTUBE_TV_API_KEY = "AIzaSyD-L7DIyuMgBk-B4DYmjJZ5UG-D6Y-vkMc";
+    static final String CLIENT_TVHTML5_NAME = "TVHTML5_SIMPLY_EMBEDDED_PLAYER";
+    static final String CLIENT_TVHTML5_VERSION = "2.0";
+
+    static final String CLIENT_SCREEN_EMBED = "EMBED";
+    static final String CLIENT_THIRD_PARTY_EMBED = "https://google.com";
+    static final String PLAYER_PARAMS = "CgIQBg";
+    static final String SEARCH_PARAMS = "EgIQAUICCAE=";
 
     static final String SEARCH_URL = BASE_URL + "/search?key=" + INNERTUBE_ANDROID_API_KEY;
     static final String PLAYER_URL = BASE_URL + "/player";
@@ -25,8 +31,15 @@ public class YoutubeConstants {
     static final String VISITOR_ID_URL = BASE_URL + "/visitor_id";
 
     // YouTube Music constants
-    static final String MUSIC_BASE_URL = "https://music.youtube.com/youtubei/v1";
-    static final String MUSIC_SEARCH_URL = MUSIC_BASE_URL + "/search?key=" + INNERTUBE_MUSIC_API_KEY;
+    static final String BASE_MUSIC_URL = "https://music.youtube.com/youtubei/v1";
+
+    static final String INNERTUBE_MUSIC_API_KEY = "AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30";
+    static final String CLIENT_MUSIC_NAME = "WEB_REMIX";
+    static final String CLIENT_MUSIC_VERSION = "1.20220727.01.00";
+
+    static final String SEARCH_MUSIC_PARAMS = "Eg-KAQwIARAAGAAgACgAMABqChADEAQQCRAFEAo=";
+
+    static final String MUSIC_SEARCH_URL = BASE_MUSIC_URL + "/search?key=" + INNERTUBE_MUSIC_API_KEY;
 
     // YouTube TV auth constants
     static final String TV_AUTH_BASE_URL = YOUTUBE_ORIGIN + "/o/oauth2";
@@ -42,11 +55,15 @@ public class YoutubeConstants {
     // Android auth constants
     static final String ANDROID_AUTH_URL = "https://android.googleapis.com/auth";
     static final String MASTER_TOKEN_BASE_URL = "https://youtube.minerea.su"; // https://github.com/Walkyst/YouTube-checkin
+    static final String TOKEN_BASE_PAYLOAD = "{\"email\":\"%s\",\"password\":\"%s\"";
+    static final String REFRESH_PART_PAYLOAD = ",\"refresh_token\":\"%s\"";
+    static final String CLOSE_TOKEN_BASE_PAYLOAD = "}";
+
     static final String CHECKIN_ACCOUNT_URL = MASTER_TOKEN_BASE_URL + "/checkin";
     static final String LOGIN_ACCOUNT_URL = MASTER_TOKEN_BASE_URL + "/login";
     static final String SAVE_ACCOUNT_URL = MASTER_TOKEN_BASE_URL + "/tv";
-    static final String TOKEN_PAYLOAD = "{\"email\":\"%s\",\"password\":\"%s\"}";
-    static final String TOKEN_REFRESH_PAYLOAD = "{\"email\":\"%s\",\"password\":\"%s\",\"refresh_token\":\"%s\"}";
+    static final String TOKEN_PAYLOAD = TOKEN_BASE_PAYLOAD + CLOSE_TOKEN_BASE_PAYLOAD;
+    static final String TOKEN_REFRESH_PAYLOAD = TOKEN_BASE_PAYLOAD + REFRESH_PART_PAYLOAD + CLOSE_TOKEN_BASE_PAYLOAD;
 
     // Utility constants
     static final String WATCH_URL_PREFIX = YOUTUBE_ORIGIN + "/watch?v=";

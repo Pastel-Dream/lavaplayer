@@ -8,9 +8,9 @@ import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo;
 import java.util.function.Function;
 
 public interface SoundCloudPlaylistLoader {
-  AudioPlaylist load(
-      String identifier,
-      HttpInterfaceManager httpInterfaceManager,
-      Function<AudioTrackInfo, AudioTrack> trackFactory
-  );
+    AudioPlaylist load(
+        String identifier,
+        HttpInterfaceManager httpInterfaceManager,
+        Function<AudioTrackInfo, AudioTrack> trackFactory
+    );
 }

@@ -11,6 +11,7 @@ import org.apache.http.entity.StringEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.URI;
 import java.util.concurrent.Executors;
@@ -25,8 +26,8 @@ public class HeartbeatingHttpStream extends PersistentHttpStream {
     private static final Logger log = LoggerFactory.getLogger(HeartbeatingHttpStream.class);
     private static final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
 
-    private final String heartbeatUrl;
-    private final int heartbeatInterval;
+    private String heartbeatUrl;
+    private int heartbeatInterval;
     private String heartbeatPayload;
 
     private ScheduledFuture<?> heartbeatFuture;

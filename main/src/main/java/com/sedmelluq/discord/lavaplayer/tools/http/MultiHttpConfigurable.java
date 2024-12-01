@@ -8,30 +8,30 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 public class MultiHttpConfigurable implements ExtendedHttpConfigurable {
-  private final Collection<ExtendedHttpConfigurable> configurables;
+    private final Collection<ExtendedHttpConfigurable> configurables;
 
-  public MultiHttpConfigurable(Collection<ExtendedHttpConfigurable> configurables) {
-    this.configurables = configurables;
-  }
-
-  @Override
-  public void setHttpContextFilter(HttpContextFilter filter) {
-    for (ExtendedHttpConfigurable configurable : configurables) {
-      configurable.setHttpContextFilter(filter);
+    public MultiHttpConfigurable(Collection<ExtendedHttpConfigurable> configurables) {
+        this.configurables = configurables;
     }
-  }
 
-  @Override
-  public void configureRequests(Function<RequestConfig, RequestConfig> configurator) {
-    for (ExtendedHttpConfigurable configurable : configurables) {
-      configurable.configureRequests(configurator);
+    @Override
+    public void setHttpContextFilter(HttpContextFilter filter) {
+        for (ExtendedHttpConfigurable configurable : configurables) {
+            configurable.setHttpContextFilter(filter);
+        }
     }
-  }
 
-  @Override
-  public void configureBuilder(Consumer<HttpClientBuilder> configurator) {
-    for (ExtendedHttpConfigurable configurable : configurables) {
-      configurable.configureBuilder(configurator);
+    @Override
+    public void configureRequests(Function<RequestConfig, RequestConfig> configurator) {
+        for (ExtendedHttpConfigurable configurable : configurables) {
+            configurable.configureRequests(configurator);
+        }
     }
-  }
+
+    @Override
+    public void configureBuilder(Consumer<HttpClientBuilder> configurator) {
+        for (ExtendedHttpConfigurable configurable : configurables) {
+            configurable.configureBuilder(configurator);
+        }
+    }
 }

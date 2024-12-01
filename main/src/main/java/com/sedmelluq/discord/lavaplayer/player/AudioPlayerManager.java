@@ -1,14 +1,15 @@
 package com.sedmelluq.discord.lavaplayer.player;
 
-import com.sedmelluq.discord.lavaplayer.remote.RemoteNodeRegistry;
 import com.sedmelluq.discord.lavaplayer.source.AudioSourceManager;
 import com.sedmelluq.discord.lavaplayer.tools.io.MessageInput;
 import com.sedmelluq.discord.lavaplayer.tools.io.MessageOutput;
+import com.sedmelluq.discord.lavaplayer.track.AudioItem;
 import com.sedmelluq.discord.lavaplayer.track.AudioReference;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.sedmelluq.discord.lavaplayer.track.DecodedTrackHolder;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.util.List;
@@ -21,203 +22,240 @@ import java.util.function.Function;
  */
 public interface AudioPlayerManager {
 
-  /**
-   * Shut down the manager. All threads will be stopped, the manager cannot be used any further. All players created
-   * with this manager will stop and all source managers registered to this manager will also be shut down.
-   *
-   * Every thread created by the audio manager is a daemon thread, so calling this is not required for an application
-   * to be able to gracefully shut down, however it should be called if the application continues without requiring this
-   * manager any longer.
-   */
-  void shutdown();
+    /**
+     * Shut down the manager. All threads will be stopped, the manager cannot be used any further. All players created
+     * with this manager will stop and all source managers registered to this manager will also be shut down.
+     * <p>
+     * Every thread created by the audio manager is a daemon thread, so calling this is not required for an application
+     * to be able to gracefully shut down, however it should be called if the application continues without requiring this
+     * manager any longer.
+     */
+    void shutdown();
 
-  /**
-   * Configure to use remote nodes for playback. On consecutive calls, the connections with previously used nodes will
-   * be severed and all remotely playing tracks will be stopped first.
-   *
-   * @param nodeAddresses The addresses of the remote nodes
-   */
-  void useRemoteNodes(String... nodeAddresses);
+    /**
+     * Enable reporting GC pause length statistics to log (warn level with lengths bad for latency, debug level otherwise)
+     */
+    void enableGcMonitoring();
 
-  /**
-   * Enable reporting GC pause length statistics to log (warn level with lengths bad for latency, debug level otherwise)
-   */
-  void enableGcMonitoring();
+    /**
+     * @param sourceManager The source manager to register, which will be used for subsequent loadItem calls
+     */
+    void registerSourceManager(AudioSourceManager sourceManager);
 
-  /**
-   * @param sourceManager The source manager to register, which will be used for subsequent loadItem calls
-   */
-  void registerSourceManager(AudioSourceManager sourceManager);
-
-  /**
-   * @param sourceManagers The source managers to register, which will be used for subsequent loadItem calls
-   */
-  default void registerSourceManagers(AudioSourceManager... sourceManagers) {
-    for (AudioSourceManager sourceManager : sourceManagers) {
-      registerSourceManager(sourceManager);
+    /**
+     * Same as {@link #registerSourceManager(AudioSourceManager)} but registers multiple in one call.
+     * @param sourceManagers The source managers to register, which will be used for subsequent loadItem calls
+     */
+    default void registerSourceManagers(AudioSourceManager... sourceManagers) {
+        for (AudioSourceManager sourceManager : sourceManagers) {
+            registerSourceManager(sourceManager);
+        }
     }
-  }
 
-  /**
-   * Shortcut for accessing a source manager of a certain class.
-   * @param klass The class of the source manager to return.
-   * @param <T> The class of the source manager.
-   * @return The source manager of the specified class, or null if not registered.
-   */
-  <T extends AudioSourceManager> T source(Class<T> klass);
+    /**
+     * Shortcut for accessing a source manager of a certain class.
+     *
+     * @param klass The class of the source manager to return.
+     * @param <T>   The class of the source manager.
+     * @return The source manager of the specified class, or null if not registered.
+     */
+    <T extends AudioSourceManager> T source(Class<T> klass);
 
-  /**
-   * @return A list of all registered audio source managers.
-   */
-  List<AudioSourceManager> getSourceManagers();
+    /**
+     * @return A list of all registered audio source managers.
+     */
+    List<AudioSourceManager> getSourceManagers();
 
-  /**
-   * Schedules loading a track or playlist with the specified identifier.
-   * @param identifier    The identifier that a specific source manager should be able to find the track with.
-   * @param resultHandler A handler to process the result of this operation. It can either end by finding a track,
-   *                      finding a playlist, finding nothing or terminating with an exception.
-   * @return A future for this operation
-   * @see #loadItem(AudioReference, AudioLoadResultHandler)
-   */
-  default Future<Void> loadItem(final String identifier, final AudioLoadResultHandler resultHandler) {
-    return loadItem(new AudioReference(identifier, null), resultHandler);
-  }
+    /**
+     * Schedules loading a track or playlist with the specified identifier.
+     *
+     * @param identifier    The identifier that a specific source manager should be able to find the track with.
+     * @param resultHandler A handler to process the result of this operation. It can either end by finding a track,
+     *                      finding a playlist, finding nothing or terminating with an exception.
+     * @return A future for this operation
+     * @see #loadItem(AudioReference, AudioLoadResultHandler)
+     */
+    default Future<Void> loadItem(final String identifier, final AudioLoadResultHandler resultHandler) {
+        return loadItem(new AudioReference(identifier, null), resultHandler);
+    }
 
-  /**
-   * Schedules loading a track or playlist with the specified identifier.
-   * @param reference     The audio reference that holds the identifier that a specific source manager
-   *                      should be able to find the track with.
-   * @param resultHandler A handler to process the result of this operation. It can either end by finding a track,
-   *                      finding a playlist, finding nothing or terminating with an exception.
-   * @return A future for this operation
-   * @see #loadItem(String, AudioLoadResultHandler)
-   */
-  Future<Void> loadItem(final AudioReference reference, final AudioLoadResultHandler resultHandler);
+    /**
+     * Schedules loading a track or playlist with the specified identifier.
+     *
+     * @param reference     The audio reference that holds the identifier that a specific source manager
+     *                      should be able to find the track with.
+     * @param resultHandler A handler to process the result of this operation. It can either end by finding a track,
+     *                      finding a playlist, finding nothing or terminating with an exception.
+     * @return A future for this operation
+     * @see #loadItem(String, AudioLoadResultHandler)
+     */
+    Future<Void> loadItem(final AudioReference reference, final AudioLoadResultHandler resultHandler);
 
-  /**
-   * Schedules loading a track or playlist with the specified identifier with an ordering key so that items with the
-   * same ordering key are handled sequentially in the order of calls to this method.
-   *
-   * @param orderingKey   Object to use as the key for the ordering channel
-   * @param identifier    The identifier that a specific source manager should be able to find the track with.
-   * @param resultHandler A handler to process the result of this operation. It can either end by finding a track,
-   *                      finding a playlist, finding nothing or terminating with an exception.
-   * @return A future for this operation
-   * @see #loadItemOrdered(Object, AudioReference, AudioLoadResultHandler)
-   */
-  default Future<Void> loadItemOrdered(Object orderingKey, final String identifier, final AudioLoadResultHandler resultHandler) {
-    return loadItemOrdered(orderingKey, new AudioReference(identifier, null), resultHandler);
-  }
+    /**
+     * Loads a track or playlist with the specified identifier.
+     *
+     * @param identifier    The identifier that a specific source manager should be able to find the track with.
+     * @param resultHandler A handler to process the result of this operation. It can either end by finding a track,
+     *                      finding a playlist, finding nothing or terminating with an exception.
+     * @see #loadItemSync(AudioReference, AudioLoadResultHandler)
+     */
+    default void loadItemSync(final String identifier, final AudioLoadResultHandler resultHandler) {
+        loadItemSync(new AudioReference(identifier, null), resultHandler);
+    }
 
-  /**
-   * Schedules loading a track or playlist with the specified identifier with an ordering key so that items with the
-   * same ordering key are handled sequentially in the order of calls to this method.
-   *
-   * @param orderingKey   Object to use as the key for the ordering channel
-   * @param reference     The audio reference that holds the identifier that a specific source manager
-   *                      should be able to find the track with.
-   * @param resultHandler A handler to process the result of this operation. It can either end by finding a track,
-   *                      finding a playlist, finding nothing or terminating with an exception.
-   * @return A future for this operation
-   * @see #loadItemOrdered(Object, String, AudioLoadResultHandler)
-   */
-  Future<Void> loadItemOrdered(Object orderingKey, final AudioReference reference, final AudioLoadResultHandler resultHandler);
+    /**
+     * Loads a track or playlist with the specified identifier.
+     *
+     * @param reference     The audio reference that holds the identifier that a specific source manager
+     *                      should be able to find the track with.
+     * @param resultHandler A handler to process the result of this operation. It can either end by finding a track,
+     *                      finding a playlist, finding nothing or terminating with an exception.
+     * @see #loadItemSync(String, AudioLoadResultHandler)
+     */
+    void loadItemSync(final AudioReference reference, final AudioLoadResultHandler resultHandler);
 
-  /**
-   * Encode a track into an output stream. If the decoder is not supposed to know the number of tracks in advance, then
-   * the encoder should call MessageOutput#finish() after all the tracks it wanted to write have been written. This will
-   * make decodeTrack() return null at that position
-   *
-   * @param stream The message stream to write it to.
-   * @param track The track to encode.
-   * @throws IOException On IO error.
-   */
-  void encodeTrack(MessageOutput stream, AudioTrack track) throws IOException;
+    /**
+     * Loads a track or playlist with the specified identifier and returns it.
+     *
+     * @param reference The audio reference that holds the identifier that a specific source manager
+     *                  should be able to find the track with.
+     * @return The loaded {@link AudioItem}, or `null` if nothing was found.
+     * @see #loadItemSync(AudioReference)
+     */
+    @Nullable
+    default AudioItem loadItemSync(final String reference) {
+        return loadItemSync(new AudioReference(reference, null));
+    }
 
-  /**
-   * Decode a track from an input stream. Null returns value indicates reaching the position where the decoder had
-   * called MessageOutput#finish().
-   *
-   * @param stream The message stream to read it from.
-   * @return Holder containing the track if it was successfully decoded.
-   * @throws IOException On IO error.
-   */
-  DecodedTrackHolder decodeTrack(MessageInput stream) throws IOException;
+    /**
+     * Loads a track or playlist with the specified identifier and returns it.
+     *
+     * @param reference The audio reference that holds the identifier that a specific source manager
+     *                  should be able to find the track with.
+     * @return The loaded {@link AudioItem}, or `null` if nothing was found.
+     */
+    @Nullable
+    AudioItem loadItemSync(final AudioReference reference);
 
-  /**
-   * @return Audio processing configuration used for tracks executed by this manager.
-   */
-  AudioConfiguration getConfiguration();
+    /**
+     * Schedules loading a track or playlist with the specified identifier with an ordering key so that items with the
+     * same ordering key are handled sequentially in the order of calls to this method.
+     *
+     * @param orderingKey   Object to use as the key for the ordering channel
+     * @param identifier    The identifier that a specific source manager should be able to find the track with.
+     * @param resultHandler A handler to process the result of this operation. It can either end by finding a track,
+     *                      finding a playlist, finding nothing or terminating with an exception.
+     * @return A future for this operation
+     * @see #loadItemOrdered(Object, AudioReference, AudioLoadResultHandler)
+     */
+    default Future<Void> loadItemOrdered(Object orderingKey, final String identifier, final AudioLoadResultHandler resultHandler) {
+        return loadItemOrdered(orderingKey, new AudioReference(identifier, null), resultHandler);
+    }
 
-  /**
-   * Seek ghosting is the effect where while a seek is in progress, buffered audio from the previous location will be
-   * served until seek is ready or the buffer is empty.
-   *
-   * @return True if seek ghosting is enabled.
-   */
-  boolean isUsingSeekGhosting();
+    /**
+     * Schedules loading a track or playlist with the specified identifier with an ordering key so that items with the
+     * same ordering key are handled sequentially in the order of calls to this method.
+     *
+     * @param orderingKey   Object to use as the key for the ordering channel
+     * @param reference     The audio reference that holds the identifier that a specific source manager
+     *                      should be able to find the track with.
+     * @param resultHandler A handler to process the result of this operation. It can either end by finding a track,
+     *                      finding a playlist, finding nothing or terminating with an exception.
+     * @return A future for this operation
+     * @see #loadItemOrdered(Object, String, AudioLoadResultHandler)
+     */
+    Future<Void> loadItemOrdered(Object orderingKey, final AudioReference reference, final AudioLoadResultHandler resultHandler);
 
-  /**
-   * @param useSeekGhosting The new state of seek ghosting
-   */
-  void setUseSeekGhosting(boolean useSeekGhosting);
+    /**
+     * Encode a track into an output stream. If the decoder is not supposed to know the number of tracks in advance, then
+     * the encoder should call MessageOutput#finish() after all the tracks it wanted to write have been written. This will
+     * make decodeTrack() return null at that position
+     *
+     * @param stream The message stream to write it to.
+     * @param track  The track to encode.
+     * @throws IOException On IO error.
+     */
+    void encodeTrack(MessageOutput stream, AudioTrack track) throws IOException;
 
-  /**
-   * @return The length of the internal buffer for audio in milliseconds.
-   */
-  int getFrameBufferDuration();
+    /**
+     * Decode a track from an input stream. Null returns value indicates reaching the position where the decoder had
+     * called MessageOutput#finish().
+     *
+     * @param stream The message stream to read it from.
+     * @return Holder containing the track if it was successfully decoded.
+     * @throws IOException On IO error.
+     */
+    DecodedTrackHolder decodeTrack(MessageInput stream) throws IOException;
 
-  /**
-   * @param frameBufferDuration New length of the internal buffer for audio in milliseconds.
-   */
-  void setFrameBufferDuration(int frameBufferDuration);
+    /**
+     * @return Audio processing configuration used for tracks executed by this manager.
+     */
+    AudioConfiguration getConfiguration();
 
-  /**
-   * Sets the threshold for how long a track can be stuck until the TrackStuckEvent is sent out. A track is considered
-   * to be stuck if the player receives requests for audio samples from the track, but the audio frame provider of that
-   * track has been returning no data for the specified time.
-   *
-   * @param trackStuckThreshold The threshold in milliseconds.
-   */
-  void setTrackStuckThreshold(long trackStuckThreshold);
+    /**
+     * Seek ghosting is the effect where while a seek is in progress, buffered audio from the previous location will be
+     * served until seek is ready or the buffer is empty.
+     *
+     * @return True if seek ghosting is enabled.
+     */
+    boolean isUsingSeekGhosting();
 
-  /**
-   * Sets the threshold for clearing an audio player when it has not been queried for the specified amount of time.
-   *
-   * @param cleanupThreshold The threshold in milliseconds.
-   */
-  void setPlayerCleanupThreshold(long cleanupThreshold);
+    /**
+     * @param useSeekGhosting The new state of seek ghosting
+     */
+    void setUseSeekGhosting(boolean useSeekGhosting);
 
-  /**
-   * Sets the number of threads used for loading processing item load requests.
-   *
-   * @param poolSize Maximum number of concurrent threads used for loading items.
-   */
-  void setItemLoaderThreadPoolSize(int poolSize);
+    /**
+     * @return The length of the internal buffer for audio in milliseconds.
+     */
+    int getFrameBufferDuration();
 
-  /**
-   * @return New audio player.
-   */
-  AudioPlayer createPlayer();
+    /**
+     * @param frameBufferDuration New length of the internal buffer for audio in milliseconds.
+     */
+    void setFrameBufferDuration(int frameBufferDuration);
 
-  /**
-   * @return Registry of remote nodes currently used.
-   */
-  RemoteNodeRegistry getRemoteNodeRegistry();
+    /**
+     * Sets the threshold for how long a track can be stuck until the TrackStuckEvent is sent out. A track is considered
+     * to be stuck if the player receives requests for audio samples from the track, but the audio frame provider of that
+     * track has been returning no data for the specified time.
+     *
+     * @param trackStuckThreshold The threshold in milliseconds.
+     */
+    void setTrackStuckThreshold(long trackStuckThreshold);
 
-  /**
-   * @param configurator Function used to reconfigure the request config of all sources which perform HTTP requests.
-   *                     Applied to all current and future registered sources. Setting this while sources are already in
-   *                     use will close all active connections, so this should be called before the sources have been
-   *                     used.
-   */
-  void setHttpRequestConfigurator(Function<RequestConfig, RequestConfig> configurator);
+    /**
+     * Sets the threshold for clearing an audio player when it has not been queried for the specified amount of time.
+     *
+     * @param cleanupThreshold The threshold in milliseconds.
+     */
+    void setPlayerCleanupThreshold(long cleanupThreshold);
 
-  /**
-   * @param configurator Function used to reconfigure the HTTP builder of all sources which perform HTTP requests.
-   *                     Applied to all current and future registered sources. Setting this while sources are already in
-   *                     use will close all active connections, so this should be called before the sources have been
-   *                     used.
-   */
-  void setHttpBuilderConfigurator(Consumer<HttpClientBuilder> configurator);
+    /**
+     * Sets the number of threads used for loading processing item load requests.
+     *
+     * @param poolSize Maximum number of concurrent threads used for loading items.
+     */
+    void setItemLoaderThreadPoolSize(int poolSize);
+
+    /**
+     * @return New audio player.
+     */
+    AudioPlayer createPlayer();
+
+    /**
+     * @param configurator Function used to reconfigure the request config of all sources which perform HTTP requests.
+     *                     Applied to all current and future registered sources. Setting this while sources are already in
+     *                     use will close all active connections, so this should be called before the sources have been
+     *                     used.
+     */
+    void setHttpRequestConfigurator(Function<RequestConfig, RequestConfig> configurator);
+
+    /**
+     * @param configurator Function used to reconfigure the HTTP builder of all sources which perform HTTP requests.
+     *                     Applied to all current and future registered sources. Setting this while sources are already in
+     *                     use will close all active connections, so this should be called before the sources have been
+     *                     used.
+     */
+    void setHttpBuilderConfigurator(Consumer<HttpClientBuilder> configurator);
 }

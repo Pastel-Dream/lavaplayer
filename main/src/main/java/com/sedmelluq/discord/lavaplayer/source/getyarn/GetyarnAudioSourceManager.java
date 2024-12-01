@@ -32,89 +32,89 @@ import static com.sedmelluq.discord.lavaplayer.tools.FriendlyException.Severity.
  * Audio source manager which detects getyarn.io tracks by URL.
  */
 public class GetyarnAudioSourceManager implements HttpConfigurable, AudioSourceManager {
-  private static final Pattern GETYARN_REGEX = Pattern.compile("(?:http://|https://(?:www\\.)?)?getyarn\\.io/yarn-clip/(.*)");
+    private static final Pattern GETYARN_REGEX = Pattern.compile("https?://(?:www\\.|)getyarn\\.io/yarn-clip/(.*)");
 
-  private final HttpInterfaceManager httpInterfaceManager;
+    private final HttpInterfaceManager httpInterfaceManager;
 
-  public GetyarnAudioSourceManager() {
-    httpInterfaceManager = new ThreadLocalHttpInterfaceManager(
-        HttpClientTools
-            .createSharedCookiesHttpBuilder()
-            .setRedirectStrategy(new HttpClientTools.NoRedirectsStrategy()),
-        HttpClientTools.DEFAULT_REQUEST_CONFIG
-    );
-  }
-
-  @Override
-  public String getSourceName() {
-    return "getyarn.io";
-  }
-
-  @Override
-  public AudioItem loadItem(AudioPlayerManager manager, AudioReference reference) {
-    final Matcher m = GETYARN_REGEX.matcher(reference.identifier);
-
-    if (!m.matches()) {
-      return null;
+    public GetyarnAudioSourceManager() {
+        httpInterfaceManager = new ThreadLocalHttpInterfaceManager(
+            HttpClientTools
+                .createSharedCookiesHttpBuilder()
+                .setRedirectStrategy(new HttpClientTools.NoRedirectsStrategy()),
+            HttpClientTools.DEFAULT_REQUEST_CONFIG
+        );
     }
 
-    return extractVideoUrlFromPage(reference);
-  }
-
-  private AudioTrack createTrack(AudioTrackInfo trackInfo) {
-    return new GetyarnAudioTrack(trackInfo, this);
-  }
-
-  @Override
-  public boolean isTrackEncodable(AudioTrack track) {
-    return true;
-  }
-
-  @Override
-  public void encodeTrack(AudioTrack track, DataOutput output) {
-    // No custom values that need saving
-  }
-
-  @Override
-  public AudioTrack decodeTrack(AudioTrackInfo trackInfo, DataInput input) {
-    return new GetyarnAudioTrack(trackInfo, this);
-  }
-
-  @Override
-  public void shutdown() {
-    // Nothing to shut down
-  }
-
-  public HttpInterface getHttpInterface() {
-    return httpInterfaceManager.getInterface();
-  }
-
-  @Override
-  public void configureRequests(Function<RequestConfig, RequestConfig> configurator) {
-    httpInterfaceManager.configureRequests(configurator);
-  }
-
-  @Override
-  public void configureBuilder(Consumer<HttpClientBuilder> configurator) {
-    httpInterfaceManager.configureBuilder(configurator);
-  }
-
-  private AudioTrack extractVideoUrlFromPage(AudioReference reference) {
-    try (final CloseableHttpResponse response = getHttpInterface().execute(new HttpGet(reference.identifier))) {
-      final String html = IOUtils.toString(response.getEntity().getContent(), StandardCharsets.UTF_8);
-      final Document document = Jsoup.parse(html);
-
-      final AudioTrackInfo trackInfo = AudioTrackInfoBuilder.empty()
-          .setUri(reference.identifier)
-          .setAuthor("Unknown")
-          .setIsStream(false)
-          .setIdentifier(document.selectFirst("meta[property=og:video:secure_url]").attr("content"))
-          .setTitle(document.selectFirst("meta[property=og:title]").attr("content"))
-          .build();
-
-      return createTrack(trackInfo);
-    } catch (IOException e) {
-      throw new FriendlyException("Failed to load info for yarn clip", SUSPICIOUS, null);
+    @Override
+    public String getSourceName() {
+        return "getyarn.io";
     }
-  }
+
+    @Override
+    public AudioItem loadItem(AudioPlayerManager manager, AudioReference reference) {
+        final Matcher m = GETYARN_REGEX.matcher(reference.identifier);
+
+        if (!m.matches()) {
+            return null;
+        }
+
+        return extractVideoUrlFromPage(reference);
+    }
+
+    private AudioTrack createTrack(AudioTrackInfo trackInfo) {
+        return new GetyarnAudioTrack(trackInfo, this);
+    }
+
+    @Override
+    public boolean isTrackEncodable(AudioTrack track) {
+        return true;
+    }
+
+    @Override
+    public void encodeTrack(AudioTrack track, DataOutput output) {
+        // No custom values that need saving
+    }
+
+    @Override
+    public AudioTrack decodeTrack(AudioTrackInfo trackInfo, DataInput input) {
+        return new GetyarnAudioTrack(trackInfo, this);
+    }
+
+    @Override
+    public void shutdown() {
+        // Nothing to shut down
+    }
+
+    public HttpInterface getHttpInterface() {
+        return httpInterfaceManager.getInterface();
+    }
+
+    @Override
+    public void configureRequests(Function<RequestConfig, RequestConfig> configurator) {
+        httpInterfaceManager.configureRequests(configurator);
+    }
+
+    @Override
+    public void configureBuilder(Consumer<HttpClientBuilder> configurator) {
+        httpInterfaceManager.configureBuilder(configurator);
+    }
+
+    private AudioTrack extractVideoUrlFromPage(AudioReference reference) {
+        try (final CloseableHttpResponse response = getHttpInterface().execute(new HttpGet(reference.identifier))) {
+            final String html = IOUtils.toString(response.getEntity().getContent(), StandardCharsets.UTF_8);
+            final Document document = Jsoup.parse(html);
+
+            final AudioTrackInfo trackInfo = AudioTrackInfoBuilder.empty()
+                .setUri(reference.identifier)
+                .setAuthor("Unknown")
+                .setIsStream(false)
+                .setIdentifier(document.selectFirst("meta[property=og:video:secure_url]").attr("content"))
+                .setTitle(document.selectFirst("meta[property=og:title]").attr("content"))
+                .build();
+
+            return createTrack(trackInfo);
+        } catch (IOException e) {
+            throw new FriendlyException("Failed to load info for yarn clip", SUSPICIOUS, null);
+        }
+    }
 }

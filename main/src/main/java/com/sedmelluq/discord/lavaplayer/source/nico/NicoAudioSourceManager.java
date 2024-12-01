@@ -43,143 +43,156 @@ import static com.sedmelluq.discord.lavaplayer.tools.FriendlyException.Severity.
  * Audio source manager that implements finding NicoNico tracks based on URL.
  */
 public class NicoAudioSourceManager implements AudioSourceManager, HttpConfigurable {
-  private static final String TRACK_URL_REGEX = "^(?:http://|https://|)(?:www\\.|)nicovideo\\.jp/watch/(.{2}[0-9]+)(?:\\?.*|)$";
+    private static final String TRACK_URL_REGEX = "^(?:http://|https://|)(?:www\\.|)nicovideo\\.jp/watch/(.{2}[0-9]+)(?:\\?.*|)$";
 
-  private static final Pattern trackUrlPattern = Pattern.compile(TRACK_URL_REGEX);
+    private static final Pattern trackUrlPattern = Pattern.compile(TRACK_URL_REGEX);
 
-  private final HttpInterfaceManager httpInterfaceManager;
-  private final AtomicBoolean loggedIn;
+    private final HttpInterfaceManager httpInterfaceManager;
+    private final AtomicBoolean loggedIn;
 
-  public NicoAudioSourceManager() {
-    this(null, null);
-  }
-
-  /**
-   * @param email    Site account email
-   * @param password Site account password
-   */
-  public NicoAudioSourceManager(String email, String password) {
-    httpInterfaceManager = HttpClientTools.createDefaultThreadLocalManager();
-    loggedIn = new AtomicBoolean();
-
-    if (!DataFormatTools.isNullOrEmpty(email) && !DataFormatTools.isNullOrEmpty(password)) {
-      login(email, password);
-    }
-  }
-
-  @Override
-  public String getSourceName() {
-    return "niconico";
-  }
-
-  @Override
-  public AudioItem loadItem(AudioPlayerManager manager, AudioReference reference) {
-    Matcher trackMatcher = trackUrlPattern.matcher(reference.identifier);
-
-    if (trackMatcher.matches()) {
-      return loadTrack(trackMatcher.group(1));
+    public NicoAudioSourceManager() {
+        this(null, null);
     }
 
-    return null;
-  }
-
-  private AudioTrack loadTrack(String videoId) {
-    try (HttpInterface httpInterface = getHttpInterface();
-         CloseableHttpResponse response = httpInterface.execute(new HttpGet("http://ext.nicovideo.jp/api/getthumbinfo/" + videoId))) {
-        HttpClientTools.assertSuccessWithContent(response, "video info");
-
-        Document document = Jsoup.parse(response.getEntity().getContent(), StandardCharsets.UTF_8.name(), "", Parser.xmlParser());
-        return extractTrackFromXml(videoId, document);
-    } catch (IOException e) {
-      throw new FriendlyException("Error occurred when extracting video info.", SUSPICIOUS, e);
-    }
-  }
-
-  private AudioTrack extractTrackFromXml(String videoId, Document document) {
-    for (Element element : document.select(":root > thumb")) {
-      String uploader = element.selectFirst("user_nickname").text();
-      String title = element.selectFirst("title").text();
-      long duration = DataFormatTools.durationTextToMillis(element.selectFirst("length").text());
-
-      return new NicoAudioTrack(new AudioTrackInfo(title, uploader, duration, videoId, false, getWatchUrl(videoId)), this);
-    }
-
-    return null;
-  }
-
-  @Override
-  public boolean isTrackEncodable(AudioTrack track) {
-    return true;
-  }
-
-  @Override
-  public void encodeTrack(AudioTrack track, DataOutput output) throws IOException {
-    // No extra information to save
-  }
-
-  @Override
-  public AudioTrack decodeTrack(AudioTrackInfo trackInfo, DataInput input) throws IOException {
-    return new NicoAudioTrack(trackInfo, this);
-  }
-
-  @Override
-  public void shutdown() {
-    // Nothing to shut down
-  }
-
-  /**
-   * @return Get an HTTP interface for a playing track.
-   */
-  public HttpInterface getHttpInterface() {
-    return httpInterfaceManager.getInterface();
-  }
-
-  @Override
-  public void configureRequests(Function<RequestConfig, RequestConfig> configurator) {
-    httpInterfaceManager.configureRequests(configurator);
-  }
-
-  @Override
-  public void configureBuilder(Consumer<HttpClientBuilder> configurator) {
-    httpInterfaceManager.configureBuilder(configurator);
-  }
-
-  void login(String email, String password) {
-    synchronized (loggedIn) {
-      if (loggedIn.get()) {
-        return;
-      }
-
-      HttpPost loginRequest = new HttpPost("https://secure.nicovideo.jp/secure/login");
-
-      loginRequest.setEntity(new UrlEncodedFormEntity(Arrays.asList(
-          new BasicNameValuePair("mail", email),
-          new BasicNameValuePair("password", password)
-      ), StandardCharsets.UTF_8));
-
-      try (HttpInterface httpInterface = getHttpInterface()) {
-        try (CloseableHttpResponse response = httpInterface.execute(loginRequest)) {
-          int statusCode = response.getStatusLine().getStatusCode();
-
-          if (statusCode != 302) {
-            throw new IOException("Unexpected response code " + statusCode);
-          }
-
-          Header location = response.getFirstHeader("Location");
-
-          if (location == null || location.getValue().contains("message=")) {
-            throw new FriendlyException("Login details for NicoNico are invalid.", COMMON, null);
-          }
-
-          loggedIn.set(true);
+    /**
+     * @param email    Site account email
+     * @param password Site account password
+     */
+    public NicoAudioSourceManager(String email, String password) {
+        httpInterfaceManager = HttpClientTools.createDefaultThreadLocalManager();
+        loggedIn = new AtomicBoolean();
+        // Log in at the start
+        if (!DataFormatTools.isNullOrEmpty(email) && !DataFormatTools.isNullOrEmpty(password)) {
+            logIn(email,password);
         }
-      } catch (IOException e) {
-        throw new FriendlyException("Exception when trying to log into NicoNico", SUSPICIOUS, e);
-      }
     }
-  }
 
-  private static String getWatchUrl(String videoId) {
-    return "http://www.nicovideo.jp/watch/" + videoId;
-  }
+    @Override
+    public String getSourceName() {
+        return "niconico";
+    }
+
+    @Override
+    public AudioItem loadItem(AudioPlayerManager manager, AudioReference reference) {
+        Matcher trackMatcher = trackUrlPattern.matcher(reference.identifier);
+
+        if (trackMatcher.matches()) {
+            return loadTrack(trackMatcher.group(1));
+        }
+
+        return null;
+    }
+
+    private AudioTrack loadTrack(String videoId) {
+        try (HttpInterface httpInterface = getHttpInterface()) {
+            try (CloseableHttpResponse response = httpInterface.execute(new HttpGet("http://ext.nicovideo.jp/api/getthumbinfo/" + videoId))) {
+                int statusCode = response.getStatusLine().getStatusCode();
+                if (!HttpClientTools.isSuccessWithContent(statusCode)) {
+                    throw new IOException("Unexpected response code from video info: " + statusCode);
+                }
+
+                Document document = Jsoup.parse(response.getEntity().getContent(), StandardCharsets.UTF_8.name(), "", Parser.xmlParser());
+                return extractTrackFromXml(videoId, document);
+            }
+        } catch (IOException e) {
+            throw new FriendlyException("Error occurred when extracting video info.", SUSPICIOUS, e);
+        }
+    }
+
+    private AudioTrack extractTrackFromXml(String videoId, Document document) {
+        for (Element element : document.select(":root > thumb")) {
+            String uploader = element.selectFirst("user_nickname").text();
+            String title = element.selectFirst("title").text();
+            String thumbnailUrl = element.selectFirst("thumbnail_url").text();
+            long duration = DataFormatTools.durationTextToMillis(element.selectFirst("length").text());
+
+            return new NicoAudioTrack(new AudioTrackInfo(title,
+                uploader,
+                duration,
+                videoId,
+                false,
+                getWatchUrl(videoId),
+                thumbnailUrl,
+                null
+            ), this);
+        }
+
+        return null;
+    }
+
+    @Override
+    public boolean isTrackEncodable(AudioTrack track) {
+        return true;
+    }
+
+    @Override
+    public void encodeTrack(AudioTrack track, DataOutput output) throws IOException {
+        // No extra information to save
+    }
+
+    @Override
+    public AudioTrack decodeTrack(AudioTrackInfo trackInfo, DataInput input) throws IOException {
+        return new NicoAudioTrack(trackInfo, this);
+    }
+
+    @Override
+    public void shutdown() {
+        // Nothing to shut down
+    }
+
+    /**
+     * @return Get an HTTP interface for a playing track.
+     */
+    public HttpInterface getHttpInterface() {
+        return httpInterfaceManager.getInterface();
+    }
+
+    @Override
+    public void configureRequests(Function<RequestConfig, RequestConfig> configurator) {
+        httpInterfaceManager.configureRequests(configurator);
+    }
+
+    @Override
+    public void configureBuilder(Consumer<HttpClientBuilder> configurator) {
+        httpInterfaceManager.configureBuilder(configurator);
+    }
+
+    void logIn(String email, String password) {
+        synchronized (loggedIn) {
+            if (loggedIn.get()) {
+                return;
+            }
+
+            HttpPost loginRequest = new HttpPost("https://secure.nicovideo.jp/secure/login");
+
+            loginRequest.setEntity(new UrlEncodedFormEntity(Arrays.asList(
+                new BasicNameValuePair("mail", email),
+                new BasicNameValuePair("password", password)
+            ), StandardCharsets.UTF_8));
+
+            try (HttpInterface httpInterface = getHttpInterface()) {
+                try (CloseableHttpResponse response = httpInterface.execute(loginRequest)) {
+                    int statusCode = response.getStatusLine().getStatusCode();
+
+                    if (statusCode != 302) {
+                        throw new IOException("Unexpected response code " + statusCode);
+                    }
+
+                    Header location = response.getFirstHeader("Location");
+
+                    if (location == null || location.getValue().contains("message=")) {
+                        throw new FriendlyException("Login details for NicoNico are invalid.", COMMON, null);
+                    }
+
+                    loggedIn.set(true);
+                }
+            } catch (IOException e) {
+                throw new FriendlyException("Exception when trying to log into NicoNico", SUSPICIOUS, e);
+            }
+        }
+    }
+
+    private static String getWatchUrl(String videoId) {
+        return "https://www.nicovideo.jp/watch/" + videoId;
+    }
 }
