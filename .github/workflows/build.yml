@@ -33,6 +33,9 @@ jobs:
             -   name: Setup Gradle
                 uses: gradle/gradle-build-action@v2
 
+            -   name: Grant execution permission
+                run: chmod +x ./gradlew
+
             -   name: Build and Publish
                 run: ./gradlew build publish --no-daemon -PMAVEN_USERNAME=$MAVEN_USERNAME -PMAVEN_PASSWORD=$MAVEN_PASSWORD
 
