@@ -5,7 +5,7 @@ import com.vanniktech.maven.publish.SonatypeHost
 import org.ajoberstar.grgit.Grgit
 
 plugins {
-    id("org.ajoberstar.grgit") version "5.2.0"
+    id("org.ajoberstar.grgit") version "5.3.0"
     id("de.undercouch.download") version "5.6.0"
     alias(libs.plugins.maven.publish.base) apply false
 }
