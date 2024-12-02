@@ -38,7 +38,7 @@ fun VersionCatalogBuilder.common() {
     library("commons-io", "commons-io", "commons-io").version("2.18.0")
     library("intellij-annotations", "org.jetbrains", "annotations").version("26.0.1")
 
-    version("jackson", "2.15.2")
+    version("jackson", "2.18.2")
     library("jackson-core", "com.fasterxml.jackson.core", "jackson-core").versionRef("jackson")
     library("jackson-databind", "com.fasterxml.jackson.core", "jackson-databind").versionRef("jackson")
 
