@@ -44,7 +44,7 @@ fun VersionCatalogBuilder.common() {
 
     library("httpclient", "org.apache.httpcomponents", "httpclient").version("4.5.14")
 
-    library("jsoup", "org.jsoup", "jsoup").version("1.16.1")
+    library("jsoup", "org.jsoup", "jsoup").version("1.18.3")
     library("base64", "net.iharder", "base64").version("2.3.9")
     library("json", "org.json", "json").version("20240303")
 }
