@@ -10,7 +10,7 @@ repositories {
     }
 }
 
-ext.d4jVersion = '3.0.11'
+ext.d4jVersion = '3.2.7'
 
 dependencies {
     compile "com.discord4j:discord4j-core:$d4jVersion"
