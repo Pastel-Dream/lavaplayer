@@ -1,4 +1,5 @@
 install:
+    - chmod +x gradlew
     - ./gradlew clean build publishToMavenLocal
 jdk:
   - openjdk11
